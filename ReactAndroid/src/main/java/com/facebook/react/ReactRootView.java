@@ -17,6 +17,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.Surface;
 import android.view.View;
@@ -47,6 +48,7 @@ import com.facebook.react.uimanager.RootView;
 import com.facebook.react.uimanager.SizeMonitoringFrameLayout;
 import com.facebook.react.uimanager.UIManagerModule;
 import com.facebook.react.uimanager.events.EventDispatcher;
+import com.facebook.react.views.androidtv.ReactAndroidTVRootViewHelper;
 import com.facebook.systrace.Systrace;
 import javax.annotation.Nullable;
 
@@ -84,6 +86,7 @@ public class ReactRootView extends SizeMonitoringFrameLayout
   private boolean mIsAttachedToInstance;
   private boolean mShouldLogContentAppeared;
   private final JSTouchDispatcher mJSTouchDispatcher = new JSTouchDispatcher(this);
+  private final ReactAndroidTVRootViewHelper mAndroidTVRootViewHelper = new ReactAndroidTVRootViewHelper(this);
   private boolean mWasMeasured = false;
   private int mWidthMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
   private int mHeightMeasureSpec = MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED);
@@ -199,6 +202,21 @@ public class ReactRootView extends SizeMonitoringFrameLayout
     // In case when there is no children interested in handling touch event, we return true from
     // the root view in order to receive subsequent events related to that gesture
     return true;
+  }
+
+  @Override
+  public boolean dispatchKeyEvent(KeyEvent ev) {
+    if (mReactInstanceManager == null || !mIsAttachedToInstance ||
+      mReactInstanceManager.getCurrentReactContext() == null) {
+      FLog.w(
+        ReactConstants.TAG,
+        "Unable to handle key event as the catalyst instance has not been attached");
+      return super.dispatchKeyEvent(ev);
+    }
+    ReactContext reactContext = mReactInstanceManager.getCurrentReactContext();
+    DeviceEventManagerModule.RCTDeviceEventEmitter eventEmitter = reactContext.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter.class);
+    mAndroidTVRootViewHelper.handleKeyEvent(ev, eventEmitter);
+    return super.dispatchKeyEvent(ev);
   }
 
   private void dispatchJSTouchEvent(MotionEvent event) {
